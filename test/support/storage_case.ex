@@ -16,6 +16,10 @@ defmodule EventStore.Migrator.StorageCase do
 
     {:ok, conn} = Postgrex.start_link(storage_config)
 
+    Postgrex.query!(conn, "ALTER TABLE events DROP COLUMN IF EXISTS original_event_id;", [])
+    Postgrex.query!(conn, "DROP TABLE IF EXISTS temp_events;", [])
+    Postgrex.query!(conn, "DROP TABLE IF EXISTS original_events;", [])
+
     Storage.Initializer.reset!(conn)
   end
 end

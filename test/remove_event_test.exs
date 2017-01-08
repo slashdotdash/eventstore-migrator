@@ -13,6 +13,8 @@ defmodule EventStore.RemoveEventTest do
 
       IO.inspect events
       assert length(events) == 2
+      assert pluck(events, :event_id) == [1, 2]
+      assert pluck(events, :stream_version) == [1, 2]
     end
   end
 
@@ -48,5 +50,9 @@ defmodule EventStore.RemoveEventTest do
       data: event,
       metadata: %{},
     }
+  end
+
+  def pluck(enumerable, field) do
+    Enum.map(enumerable, &Map.get(&1, field))
   end
 end
