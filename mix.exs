@@ -6,6 +6,7 @@ defmodule EventStore.Migrator.Mixfile do
       app: :eventstore_migrator,
       version: "0.1.0",
       elixir: "~> 1.4",
+      elixirc_paths: elixirc_paths(Mix.env),
       description: description(),
       package: package(),
       build_embedded: Mix.env == :prod,
@@ -20,11 +21,16 @@ defmodule EventStore.Migrator.Mixfile do
     ]
   end
 
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
   defp deps do
     [
       {:eventstore, "~> 0.7"},
       {:mix_test_watch, "~> 0.2", only: :dev},
+      {:poison, "~> 3.0", only: [:test]},
       {:postgrex, "~> 0.13"},
+      {:uuid, "~> 1.1", only: :test}
     ]
   end
 
