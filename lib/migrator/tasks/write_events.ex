@@ -1,4 +1,4 @@
-defmodule EventStore.Migrator.Tasks.WriteTempEvent do
+defmodule EventStore.Migrator.Tasks.WriteEvents do
   defmodule State do
     defstruct [
       conn: nil,
@@ -8,9 +8,9 @@ defmodule EventStore.Migrator.Tasks.WriteTempEvent do
     ]
   end
 
-  alias EventStore.Migrator.Tasks.WriteTempEvent.State
+  alias EventStore.Migrator.Tasks.WriteEvents.State
 
-  def execute(events, conn, serializer) do
+  def execute(events, %{conn: conn, serializer: serializer}) do
     Stream.transform(
       events,
       %State{conn: conn, serializer: serializer},
@@ -34,7 +34,6 @@ defmodule EventStore.Migrator.Tasks.WriteTempEvent do
   defp insert(%State{conn: conn, serializer: serializer}, event, event_id, stream_version) do
     Postgrex.query!(conn, insert_statement(), [
       event_id,
-      event.event_id,
       event.stream_id,
       stream_version,
       event.correlation_id,
@@ -47,8 +46,8 @@ defmodule EventStore.Migrator.Tasks.WriteTempEvent do
 
   defp insert_statement do
 """
-INSERT INTO temp_events (event_id, original_event_id, stream_id, stream_version, correlation_id, event_type, data, metadata, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO events (event_id, stream_id, stream_version, correlation_id, event_type, data, metadata, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 """
   end
 end

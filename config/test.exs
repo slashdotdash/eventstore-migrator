@@ -12,3 +12,11 @@ config :eventstore, EventStore.Storage,
   database: "eventstore_test",
   hostname: "localhost",
   pool_size: 1
+
+config :eventstore_migrator, EventStore.Migrator,
+  serializer: EventStore.Migrator.JsonSerializer,
+  username: "postgres",
+  password: "postgres",
+  database: "eventstore_migrator_test",
+  hostname: "localhost",
+  pool_size: 1
