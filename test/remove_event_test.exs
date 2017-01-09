@@ -1,10 +1,12 @@
-defmodule EventStore.RemoveEventTest do
+defmodule EventStore.Migrator.RemoveEventTest do
   use EventStore.Migrator.StorageCase
 
   alias EventStore.Migrator.EventFactory
 
   defmodule WantedEvent, do: defstruct [uuid: nil]
   defmodule UnwantedEvent, do: defstruct [uuid: nil]
+
+  defmodule ASnapshot, do: defstruct [uuid: nil]
 
   describe "remove an event" do
     setup [:append_events, :migrate]
@@ -42,11 +44,48 @@ defmodule EventStore.RemoveEventTest do
     end
   end
 
+  describe "remove an event with all stream subscription" do
+    setup [:append_events, :create_all_stream_subscription, :migrate]
+
+    test "should copy subscription", context do
+      {:ok, [subscription]} = EventStore.Migrator.Reader.subscriptions()
+
+      assert subscription.stream_uuid == "$all"
+      assert subscription.subscription_name == context[:subscription_name]
+      assert subscription.last_seen_event_id == 2
+      assert subscription.last_seen_stream_version == nil
+    end
+  end
+
+  describe "remove an event with single stream subscription" do
+    setup [:append_events, :create_single_stream_subscription, :migrate]
+
+    test "should copy subscription", context do
+      {:ok, [subscription]} = EventStore.Migrator.Reader.subscriptions()
+
+      assert subscription.stream_uuid == context[:stream_uuid]
+      assert subscription.subscription_name == context[:subscription_name]
+      assert subscription.last_seen_event_id == nil
+      assert subscription.last_seen_stream_version == 2
+    end
+  end
+
+  describe "remove an event with a snapshot" do
+    setup [:append_events, :create_snapshot, :migrate]
+
+    test "should copy snapsot", context do
+      {:ok, snapshot} = EventStore.Migrator.Reader.read_snapshot(context[:stream_uuid])
+
+      assert snapshot.source_uuid == context[:stream_uuid]
+      assert snapshot.source_version == 2
+    end
+  end
+
   defp migrate(context) do
     EventStore.Migrator.migrate(fn stream ->
       Stream.reject(
         stream,
-        fn (event_data) -> event_data.event_type == "Elixir.EventStore.RemoveEventTest.UnwantedEvent" end
+        fn (event_data) -> event_data.event_type == "#{__MODULE__}.UnwantedEvent" end
       )
     end)
 
@@ -79,6 +118,35 @@ defmodule EventStore.RemoveEventTest do
     EventStore.append_to_stream(stream_uuid, 0, events)
 
     [stream_uuid: stream_uuid]
+  end
+
+  defp create_all_stream_subscription(_context) do
+    subscription_name = "test-all-subscription"
+
+    EventStore.subscribe_to_all_streams(subscription_name, self(), 0)
+
+    [subscription_name: subscription_name]
+  end
+
+  defp create_single_stream_subscription(context) do
+    subscription_name = "test-single-subscription"
+
+    EventStore.subscribe_to_stream(context[:stream_uuid], subscription_name, self(), 0)
+
+    [subscription_name: subscription_name]
+  end
+
+  defp create_snapshot(context) do
+    EventStore.record_snapshot(%EventStore.Snapshots.SnapshotData{
+      source_uuid: context[:stream_uuid],
+      source_version: 0,
+      source_type: "Elixir.EventStore.RemoveEventTest.ASnapshot",
+      data: "{\"uuid\":1}",
+      metadata: "{}",
+      created_at: DateTime.utc_now |> DateTime.to_naive,
+    })
+
+    []
   end
 
   def pluck(enumerable, field) do

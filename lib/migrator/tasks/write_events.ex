@@ -18,7 +18,7 @@ defmodule EventStore.Migrator.Tasks.WriteEvents do
     )
   end
 
-  defp write(event, %State{conn: conn, serializer: serializer, next_event_id: next_event_id, stream_versions: stream_versions} = state) do
+  defp write(event, %State{next_event_id: next_event_id, stream_versions: stream_versions} = state) do
     stream_version = Map.get(stream_versions, event.stream_id, 0) + 1
 
     insert(state, event, next_event_id, stream_version)

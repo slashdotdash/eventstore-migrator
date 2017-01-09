@@ -7,6 +7,14 @@ defmodule EventStore.Migrator.Reader do
     EventStore.Storage.Stream.stream_info(conn(), stream_uuid)
   end
 
+  def subscriptions do
+    EventStore.Storage.Subscription.subscriptions(conn())
+  end
+
+  def read_snapshot(source_uuid) do
+    EventStore.Storage.Snapshot.read_snapshot(conn(), source_uuid)
+  end
+
   defp conn do
     storage_config = Application.get_env(:eventstore_migrator, EventStore.Migrator)
 

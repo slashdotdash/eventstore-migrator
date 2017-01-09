@@ -1,29 +1,26 @@
-defmodule EventStore.Migrator.UpgradeEventTest do
+defmodule EventStore.Migrator.MigrateSerializationFormatTest do
   use EventStore.Migrator.StorageCase
 
   alias EventStore.Migrator.EventFactory
 
-  defmodule OriginalEvent, do: defstruct [uuid: nil]
-  defmodule UpgradedEvent, do: defstruct [uuid: nil, additional: nil]
+  defmodule AnEvent, do: defstruct [uuid: nil]
   defmodule AnotherEvent, do: defstruct [uuid: nil]
 
   describe "upgrade an event" do
     setup [:append_events, :migrate]
 
-    test "should upgrade only matching events" do
+    test "should migrate all events using new serialization format" do
       {:ok, events} = EventStore.Migrator.Reader.read_migrated_events()
 
       assert length(events) == 3
       assert pluck(events, :event_id) == [1, 2, 3]
       assert pluck(events, :stream_version) == [1, 2, 3]
       assert pluck(events, :event_type) == [
+        "#{__MODULE__}.AnEvent",
         "#{__MODULE__}.AnotherEvent",
-        "#{__MODULE__}.UpgradedEvent",
         "#{__MODULE__}.AnotherEvent"
       ]
-      assert Enum.at(events, 1).data == String.trim("""
-{\"uuid\":2,\"additional\":\"upgraded\"}
-""")
+      assert Enum.at(events, 0).data == :erlang.term_to_binary(%AnEvent{uuid: 1})
     end
 
     test "should copy stream", context do
@@ -35,21 +32,13 @@ defmodule EventStore.Migrator.UpgradeEventTest do
   end
 
   defp migrate(context) do
-    EventStore.Migrator.migrate(fn stream ->
-      Stream.map(
-        stream,
-        fn (event) ->
-          case event.data do
-            %OriginalEvent{uuid: uuid} ->
-              %EventStore.RecordedEvent{event |
-                event_type: "#{__MODULE__}.UpgradedEvent",
-                data: %UpgradedEvent{uuid: uuid, additional: "upgraded"},
-              }
-            _ -> event
-          end
-        end
-      )
-    end)
+    source_config = Application.get_env(:eventstore, EventStore.Storage)
+    target_config = Application.get_env(:eventstore_migrator, EventStore.Migrator)
+
+    # switch serializer from JSON to Erlang term format
+    target_config = Keyword.put(target_config, :serializer, EventStore.TermSerializer)
+
+    EventStore.Migrator.migrate(source_config, target_config, fn stream -> stream end)
 
     context
   end
@@ -58,8 +47,8 @@ defmodule EventStore.Migrator.UpgradeEventTest do
     stream_uuid = UUID.uuid4()
 
     events = EventFactory.to_event_data([
-      %AnotherEvent{uuid: 1},
-      %OriginalEvent{uuid: 2},
+      %AnEvent{uuid: 1},
+      %AnotherEvent{uuid: 2},
       %AnotherEvent{uuid: 3}
     ])
 
