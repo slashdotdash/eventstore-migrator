@@ -9,7 +9,6 @@ defmodule EventStore.Migrator.AggregateEventsTest do
   describe "combine events" do
     setup [:append_events, :migrate]
 
-    @tag :wip
     test "should remove individual events and replace with aggregated event" do
       {:ok, events} = EventStore.Migrator.Reader.read_migrated_events()
 

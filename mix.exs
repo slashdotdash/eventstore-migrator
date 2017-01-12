@@ -4,7 +4,7 @@ defmodule EventStore.Migrator.Mixfile do
   def project do
     [
       app: :eventstore_migrator,
-      version: "0.1.0",
+      version: "0.1.1",
       elixir: "~> 1.4",
       elixirc_paths: elixirc_paths(Mix.env),
       description: description(),
@@ -26,7 +26,7 @@ defmodule EventStore.Migrator.Mixfile do
 
   defp deps do
     [
-      {:eventstore, "~> 0.7"},
+      {:eventstore, "~> 0.8"},
       {:mix_test_watch, "~> 0.2", only: :dev},
       {:poison, "~> 3.0", only: [:test]},
       {:postgrex, "~> 0.13"},
