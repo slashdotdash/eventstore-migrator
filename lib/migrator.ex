@@ -5,6 +5,7 @@ defmodule EventStore.Migrator do
 
   alias EventStore.Migrator.Tasks.{
     RemoveEmptyStreams,
+    ResetTableSequence,
     SetLastSeenEvent,
     StreamAllEvents,
     TableCopier,
@@ -48,6 +49,8 @@ defmodule EventStore.Migrator do
 
     RemoveEmptyStreams.execute(target.conn)
     SetLastSeenEvent.execute(target.conn)
+    ResetTableSequence.execute(target.conn, "streams", "stream_id")
+    ResetTableSequence.execute(target.conn, "subscriptions", "subscription_id")
   end
 
   defp parse_config(config) do

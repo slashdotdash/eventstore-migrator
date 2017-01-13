@@ -25,6 +25,11 @@ defmodule EventStore.Migrator.RemoveEventTest do
       assert stream_id == 1
       assert stream_version == 2
     end
+
+    test "should reset stream id sequence" do
+      %{rows: [[next_value]]} = Postgrex.query!(conn(), "SELECT nextval('streams_stream_id_seq');", [])
+      assert next_value == 2
+    end
   end
 
   describe "remove all events from a stream" do
@@ -54,6 +59,11 @@ defmodule EventStore.Migrator.RemoveEventTest do
       assert subscription.subscription_name == context[:subscription_name]
       assert subscription.last_seen_event_id == 2
       assert subscription.last_seen_stream_version == nil
+    end
+
+    test "should reset subscription id sequence" do
+      %{rows: [[next_value]]} = Postgrex.query!(conn(), "SELECT nextval('subscriptions_subscription_id_seq');", [])
+      assert next_value == 2
     end
   end
 
@@ -147,6 +157,14 @@ defmodule EventStore.Migrator.RemoveEventTest do
     })
 
     []
+  end
+
+  defp conn do
+    storage_config = Application.get_env(:eventstore_migrator, EventStore.Migrator)
+
+    {:ok, conn} = Postgrex.start_link(storage_config)
+
+    conn
   end
 
   def pluck(enumerable, field) do
